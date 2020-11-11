@@ -1,0 +1,15 @@
+---
+- name: Install Oracle Database 12c Release 1 on Centos 8 
+  hosts: 127.0.0.1
+  connection: local
+  become: True
+  vars_files:
+    # User defined variables for infrastructure
+    - infra-vars.yml
+    - db-vars.yml
+    # User Passwords
+    - secrets.yml
+  roles:
+    - role: linux-oracle
+    - role: install-oracle
+      become_user: '{{ oracle_user }}'

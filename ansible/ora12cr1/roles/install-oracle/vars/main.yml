@@ -1,0 +1,18 @@
+oracle_user: oracle
+oracle_install_group: oinstall
+oracle_hostname: '{{ ansible_fqdn }}'
+oracle_base: /oracle/app
+inventory_os_group: '{{ oracle_install_group }}'
+inventory_location: '{{ oracle_base }}/inventory'
+oracle_install_version: "12102"
+dbhome_name: "dbhome_1"
+oracle_home: '{{ oracle_base }}/{{ oracle_user }}/product/{{ oracle_install_version }}/{{ dbhome_name }}'
+
+installer_archives:
+  - "linuxamd64_12102_database_1of2.zip"
+  - "linuxamd64_12102_database_2of2.zip"
+install_db: INSTALL_DB_SWONLY
+oracle_edition: "EE"
+oracle_dba_group: dba
+oracle_oper_group: oper
+

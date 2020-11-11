@@ -1,0 +1,39 @@
+################################################################################
+# ==> install-oracle role installs the Oracle 12c Release 1 Database software
+# ==> author: Rajkumar Adepu
+################################################################################
+- name: 'Check $ORACLE_HOME/bin/oracle file exists'
+  stat:
+    path: '{{ oracle_home }}/bin/oracle'
+  register: stat_result
+
+- name: Create folder for installation files
+  file: state=directory path={{ installation_folder }}
+  when: not stat_result.stat.exists
+
+- name: Unarchive installation files
+  unarchive:
+    src: '{{ item }}'
+    dest: '{{ installation_folder }}/'
+  with_items: '{{ installer_archives }}'
+  when: not stat_result.stat.exists
+
+# ==> generate response file
+- name: Generate the response file for software only installation
+  template: src=db_install.rsp.j2 dest="{{ installation_folder }}/db_install.rsp"
+  when: not stat_result.stat.exists
+
+# ==> execute installation
+- name: Install Product
+  command: "{{ installation_folder}}/database/runInstaller -silent -ignorePrereq -ignoreSysPrereqs -waitforcompletion -responseFile {{ installation_folder }}/db_install.rsp"
+  when: not stat_result.stat.exists
+
+# ==> execute Inventory command as root
+- name: Execute Inventoty root command
+  command: '{{ inventory_location }}/orainstRoot.sh'
+  become_user: root
+
+# ==> execute DB home command as root
+- name: Execute DB home root command
+  command: '{{ oracle_home }}/root.sh'
+  become_user: root
