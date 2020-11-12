@@ -1,30 +1,25 @@
-resource "aws_key_pair" "demo_key" {
-  key_name   = "tfKeyPair"
-  public_key = file(var.public_key)
+locals {
+  vpc_id           = "vpc-18ab4d65"
+  subnet_id        = "subnet-0e4bd143"
+  ssh_user         = "ubuntu"
+  key_name         = "ingnx"
+  private_key_path = "ingnx.pem"
 }
 
 resource "aws_instance" "tomcat" {
-  ami                     = var.ami
+  ami                     = "ami-056940cb2a7bb6d71"
+  subnet_id               = "subnet-0e4bd143"
   instance_type           = var.instance
-  key_name                = aws_key_pair.demo_key.key_name
-  vpc_security_group_ids  = [
-                            aws_security_group.web.id,
-                            aws_security_group.ssh.id,
-                            aws_security_group.egress-tls.id,
-                            aws_security_group.ping-ICMP.id,
-	                          aws_security_group.tomcat-server-port.id
-  ]
+  key_name                = "ingnx"
+  associate_public_ip_address = true
+  security_groups             = [aws_security_group.tomcat.id]
+  
 
-  ebs_block_device {
-    device_name           = "/dev/sda1"
-    volume_size           = 20
-    volume_type           = "gp2"
-    delete_on_termination = true
-  }
 
   connection {
-    private_key = file(var.private_key)
-    user        = var.ansible_user
+    private_key = file(local.private_key_path)
+    type        = "ssh"
+    user        = local.ssh_user
     host        = aws_instance.tomcat.public_ip
   }
 
@@ -57,14 +52,21 @@ provisioner "local-exec" {
 
   tags = {
     Name     = "tomcat"
-    Location = "Mumbai"
+    Location = "Verginia"
     "Terraform" : "true"
   }
 }
 
-resource "aws_security_group" "web" {
-  name        = "default-web"
-  description = "Security group for web that allows web traffic from internet"
+resource "aws_security_group" "tomcat" {
+  name   = "tomcat_access"
+  vpc_id = local.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   ingress {
     from_port   = 80
@@ -73,81 +75,16 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "web-default-vpc"
-  }
-}
-
-resource "aws_security_group" "ssh" {
-  name        = "default-ssh"
-  description = "Security group for nat instances that allows SSH and VPN traffic from internet"
-  
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "ssh-default-vpc"
-  }
-}
-
-resource "aws_security_group" "egress-tls" {
-  name        = "default-egress-tls"
-  description = "Default security group that allows inbound and outbound traffic from all instances in the VPC"
- 
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "egress-tls-default-vpc"
-  }
 }
 
-resource "aws_security_group" "ping-ICMP" {
-  name        = "default-ping"
-  description = "Default security group that allows to ping the instance"
 
-  ingress {
-    from_port        = -1
-    to_port          = -1
-    protocol         = "icmp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
 
-  tags = {
-    Name = "ping-ICMP-default-vpc"
-  }
-}
 
-# Allow the Tomcat Apps to receive requests on port 8080
-resource "aws_security_group" "tomcat-server-port" {
-  name        = "tomcat-server-port"
-  description = "Default security group that allows to use port 8080"
-  
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
-  tags = {
-    Name = "web_server-tomcat-default-vpc"
-  }
-}
 
